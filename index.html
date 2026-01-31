@@ -1,0 +1,1141 @@
+<!doctype html>
+<html lang="fi">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover" />
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" sizes="192x192" href="./icon192.png">
+  <link rel="apple-touch-icon" sizes="192x192" href="./icon192.png">
+  <meta name="theme-color" content="#0b1220" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+  <title>GIPF (v0.9.15 – Basic)</title>
+  <style>
+    :root{
+      --bg:#0b1220;
+      --ink:#e9eefc;
+      --muted:#b6c2e6;
+      --grid:#2a3b66;
+      --spot:#1b2a4a;
+      --hilite:#ffd36a;
+      --danger:#ff6b6b;
+      --white:#f4f4f4;
+
+      /* "musta" pelaaja = pinkki pyynnön mukaan */
+      --black:#fb7185;
+      --wstroke:#d7d7d7;
+      --bstroke:#ff9db0;
+
+      --shadow:rgba(0,0,0,.35);
+    }
+
+    html,body{
+      height:100%;
+      margin:0;
+      color:var(--ink);
+      font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;
+      background:radial-gradient(1200px 600px at 25% 10%, #172a44 0%, var(--bg) 55%, #070a0d 100%);
+    }
+
+    .wrap{
+      display:grid;
+      grid-template-columns: 1fr 320px;
+      gap:12px;
+      padding:12px;
+      box-sizing:border-box;
+      height:100%;
+    }
+
+    @media (max-width: 980px){
+      .wrap{grid-template-columns: 1fr; grid-template-rows:auto auto;}
+    }
+
+    .boardCard{
+      background:linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.02));
+      border:1px solid rgba(255,255,255,.08);
+      border-radius:16px;
+      box-shadow:0 10px 30px var(--shadow);
+      position:relative;
+      overflow:hidden;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      min-height:520px;
+    }
+
+    .side{
+      background:linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.02));
+      border:1px solid rgba(255,255,255,.08);
+      border-radius:16px;
+      box-shadow:0 10px 30px var(--shadow);
+      padding:12px;
+      box-sizing:border-box;
+      display:flex;
+      flex-direction:column;
+      gap:10px;
+      min-height:520px;
+    }
+
+    .row{display:flex; gap:10px; align-items:center; justify-content:space-between; flex-wrap:wrap;}
+    .pill{
+      padding:8px 10px;
+      border-radius:999px;
+      background:rgba(255,255,255,.06);
+      border:1px solid rgba(255,255,255,.08);
+      font-size:14px;
+      color:var(--muted);
+      display:inline-flex;
+      gap:8px;
+      align-items:center;
+    }
+    .pill strong{color:var(--ink); font-weight:700;}
+    .btn{
+      border:1px solid rgba(255,255,255,.14);
+      background:rgba(255,255,255,.06);
+      color:var(--ink);
+      border-radius:12px;
+      padding:10px 12px;
+      cursor:pointer;
+      font-weight:700;
+      user-select:none;
+    }
+    .btn:hover{background:rgba(255,255,255,.09);}
+    .btn:active{transform:translateY(1px);}
+    .btn.danger{border-color:rgba(255,107,107,.35); background:rgba(255,107,107,.10);}
+
+    .status{
+      padding:10px 12px;
+      border-radius:14px;
+      border:1px solid rgba(255,255,255,.10);
+      background:rgba(0,0,0,.18);
+      line-height:1.25;
+      font-size:14px;
+      color:var(--muted);
+      min-height:44px;
+      display:flex;
+      align-items:center;
+    }
+    .status b{color:var(--ink);}
+
+    .log{
+      flex:1;
+      overflow:auto;
+      padding:10px 12px;
+      border-radius:14px;
+      border:1px solid rgba(255,255,255,.10);
+      background:rgba(0,0,0,.18);
+      font-size:13px;
+      color:var(--muted);
+      line-height:1.35;
+      white-space:pre-wrap;
+    }
+
+    /* SVG styling */
+    svg{ width:min(86vh, 980px); height:auto; display:block; }
+    .gridLine{ stroke:var(--grid); stroke-width:2; stroke-linecap:round; opacity:.9; }
+    .spot{ fill:var(--spot); stroke:rgba(255,255,255,.10); stroke-width:2; cursor:default; }
+    .spot.entry{ stroke:rgba(255,255,255,.50); cursor:pointer; }
+    .spot.hilite{ stroke:var(--hilite); stroke-width:4; }
+    .spot.entrySelW{ stroke:var(--white) !important; stroke-width:4 !important; }
+    .spot.entrySelB{ stroke:var(--black) !important; stroke-width:4 !important; }
+    .spot.opt{ stroke:var(--hilite); stroke-width:4; }
+    .spot.bad{ stroke:var(--danger); stroke-width:4; }
+
+    .pieceW{ fill:var(--white); stroke:var(--wstroke); stroke-width:3; }
+    .pieceW,.pieceB{ pointer-events:none; }
+    @keyframes blinkOut { 0%{opacity:1} 50%{opacity:.15} 100%{opacity:1} }
+    .blinkOut{ animation: blinkOut 220ms ease-in-out 0s 3; }
+
+    .pieceB{ fill:var(--black); stroke:var(--bstroke); stroke-width:3; }
+    .pieceShadow{ filter:url(#ds); }
+
+    .overlay{
+      position:absolute;
+      inset:0;
+      display:none;
+      align-items:center;
+      justify-content:center;
+      background:rgba(0,0,0,.55);
+      z-index:5;
+      padding:16px;
+      box-sizing:border-box;
+    }
+    .overlay.show{display:flex;}
+    .modal{
+      width:min(560px, 100%);
+      background:linear-gradient(180deg, rgba(255,255,255,.07), rgba(255,255,255,.03));
+      border:1px solid rgba(255,255,255,.14);
+      border-radius:16px;
+      box-shadow:0 14px 40px rgba(0,0,0,.55);
+      padding:14px;
+      box-sizing:border-box;
+    }
+    .modal h3{margin:0 0 8px 0; font-size:16px;}
+    .modal p{margin:0 0 10px 0; color:var(--muted); font-size:14px; line-height:1.35;}
+    .modal .choices{display:flex; flex-direction:column; gap:8px; margin-top:10px;}
+    .choiceBtn{
+      text-align:left;
+      padding:10px 12px;
+      border-radius:12px;
+      border:1px solid rgba(255,255,255,.12);
+      background:rgba(0,0,0,.18);
+      color:var(--ink);
+      cursor:pointer;
+      font-weight:700;
+    }
+    .choiceBtn:hover{background:rgba(255,255,255,.06);}
+    .tiny{font-size:12px; color:var(--muted);}
+  </style>
+</head>
+
+<body>
+  <div class="wrap">
+    <div class="boardCard">
+      <div id="overlay" class="overlay">
+        <div class="modal">
+          <h3 id="modalTitle">Valinta</h3>
+          <p id="modalText">Valitse vaihtoehto.</p>
+          <div id="modalChoices" class="choices"></div>
+          <div class="tiny" style="margin-top:10px;">v0.9.15: sisääntulo = 24 reunapistettä (ei irrallisia pisteitä). Reunareunaviivat poistettu.</div>
+        </div>
+      </div>
+
+      <div id="boardHost"></div>
+    </div>
+
+    <div class="side">
+      <div class="row">
+        <div class="pill">Vuoro: <strong id="turnLabel">Valkoinen</strong></div>
+        <button class="btn" id="newBtn">Uusi peli</button>
+      </div>
+
+      <div class="row">
+        <div class="pill">Valkoisia: <strong id="wRes">15</strong></div>
+        <div class="pill">Punaisia: <strong id="bRes">15</strong></div>
+      </div>
+
+      <div class="status" id="statusBox"></div>
+
+      <div class="row">
+        <button class="btn" id="undoBtn" title="Peru viimeisin siirto (yksi taso)">Peru</button>
+        <button class="btn danger" id="resetBtn" style="display:none;">Tyhjennä lauta</button>
+      </div>
+
+      <div class="log" id="logBox"></div>
+    </div>
+  </div>
+
+<script>
+/* =========================================================
+   GIPF (v0.9.15 – Basic rules only)
+   - Board radius 4 -> 61 spots (side has 5 points)
+   - Entry points are the 24 rim spots (distance == RADIUS) and are NOT part of the play area
+   - IMPORTANT: No rim-to-rim grid lines are drawn.
+     => Each rim spot connects inward only:
+        - corners: 1 inward line
+        - other rim: 2 inward lines
+   - Turn: click an entry spot (select), click again -> choose 1/2 push directions, then push.
+   ========================================================= */
+
+(() => {
+  const PHASE = {
+    PLACE_ON_ENTRY: "PLACE_ON_ENTRY",
+    RESOLVE_CAPTURES: "RESOLVE_CAPTURES",
+    GAME_OVER: "GAME_OVER",
+  };
+
+  const DIRS = [
+    {q: 1, r: 0},  // E
+    {q: 1, r:-1},  // NE
+    {q: 0, r:-1},  // NW
+    {q:-1, r: 0},  // W
+    {q:-1, r: 1},  // SW
+    {q: 0, r: 1},  // SE
+  ];
+  const dirIndexOpp = (i)=> (i+3)%6;
+
+  const RADIUS = 4;
+
+  const SPOT_R = 14;
+
+  // layout
+  const viewW = 900, viewH = 720;
+  const cx = viewW/2, cy = viewH/2 + 8;
+  const hexSize = 52;
+
+  // state
+  let phase = PHASE.PLACE_ON_ENTRY;
+  let current = "W";
+  let reserve = { W: 15, B: 15 };
+  let board = new Map(); // id -> {q,r,x,y,piece}
+  let entryKeys = [];    // 24 rim spots
+  let selectedEntryKey = null;
+  let entryTargets = null; // Map targetKey -> dirIdx
+  let history = [];
+
+  let captureContext = null;
+  let blinkOutMap = new Map(); // key -> color for short removal flash
+
+  // UI
+  const boardHost = document.getElementById("boardHost");
+  const statusBox = document.getElementById("statusBox");
+  const logBox = document.getElementById("logBox");
+  const turnLabel = document.getElementById("turnLabel");
+  const wResEl = document.getElementById("wRes");
+  const bResEl = document.getElementById("bRes");
+
+  const overlay = document.getElementById("overlay");
+  const modalTitle = document.getElementById("modalTitle");
+  const modalText = document.getElementById("modalText");
+  const modalChoices = document.getElementById("modalChoices");
+
+  const newBtn = document.getElementById("newBtn");
+  const undoBtn = document.getElementById("undoBtn");
+  const resetBtn = document.getElementById("resetBtn");
+
+  function keyOf(q,r){ return q + "," + r; }
+  function distHex(q,r){
+    const s = -q - r;
+    return Math.max(Math.abs(q), Math.abs(r), Math.abs(s));
+  }
+  function isRimSpot(q,r){ return distHex(q,r) === RADIUS; }
+
+  function axialToPixel(q,r){
+    const x = cx + hexSize * (Math.sqrt(3) * q + Math.sqrt(3)/2 * r);
+    const y = cy + hexSize * (3/2 * r);
+    return {x,y};
+  }
+
+  function inBoard(q,r){
+    return distHex(q,r) <= RADIUS;
+  }
+
+  function addLog(s){
+    logBox.textContent = (s + "\n" + logBox.textContent).trimEnd();
+  }
+
+  function setStatus(html){
+    statusBox.innerHTML = html;
+  }
+
+  function updateSideUI(){
+    turnLabel.textContent = (current === "W") ? "Valkoinen" : "Punainen";
+    wResEl.textContent = String(reserve.W);
+    bResEl.textContent = String(reserve.B);
+  }
+
+  function snapshot(){
+    const snap = {
+      phase,
+      current,
+      reserve: {W:reserve.W, B:reserve.B},
+      selectedEntryKey,
+      pieces: Array.from(board.values()).map(s => ({k:s.id, p: s.piece ? {c:s.piece.c} : null})),
+      captureContext: captureContext ? JSON.parse(JSON.stringify(captureContext)) : null
+    };
+    history.push(snap);
+    if(history.length > 30) history.shift();
+  }
+
+  function restoreFromSnap(snap){
+    phase = snap.phase;
+    current = snap.current;
+    reserve.W = snap.reserve.W;
+    reserve.B = snap.reserve.B;
+    selectedEntryKey = snap.selectedEntryKey;
+    captureContext = snap.captureContext;
+
+    for(const s of board.values()) s.piece = null;
+    for(const it of snap.pieces){
+      const s = board.get(it.k);
+      s.piece = it.p ? ({c: it.p.c}) : null;
+    }
+
+    render();
+    updateSideUI();
+    updateStatusForPhase();
+  }
+
+  function undo(){
+    if(history.length === 0) return;
+    const snap = history.pop();
+    restoreFromSnap(snap);
+    addLog("↩️ Peru");
+  }
+
+  function resetBoardOnly(){
+    snapshot();
+    for(const s of board.values()) s.piece = null;
+    selectedEntryKey = null;
+    entryTargets = null;
+
+    // restore rim colors when cancelling
+    document.querySelectorAll(".spot").forEach(el=>{
+      if(el.dataset.baseStroke !== undefined){
+        if(el.dataset.baseStroke !== "") el.setAttribute("stroke", el.dataset.baseStroke);
+        else el.removeAttribute("stroke");
+        if(el.dataset.baseStrokeWidth !== "") el.setAttribute("stroke-width", el.dataset.baseStrokeWidth);
+        else el.removeAttribute("stroke-width");
+      }
+    });
+    captureContext = null;
+    blinkOutMap.clear();
+    phase = PHASE.PLACE_ON_ENTRY;
+    render();
+    updateSideUI();
+    updateStatusForPhase();
+    addLog("🧹 Lauta tyhjennetty (varastot ennallaan)");
+  }
+
+  function currentColorName(c){ return c==="W" ? "Valkoinen" : "Punainen"; }
+
+  function getDefaultStartingSpots(){
+    const d = RADIUS - 1; // ring 3
+    const keys = [];
+    for(let i=0;i<6;i++){
+      const q = DIRS[i].q * d;
+      const r = DIRS[i].r * d;
+      const k = keyOf(q,r);
+      if(board.has(k)) keys.push(k);
+    }
+    return keys;
+  }
+
+  function newGame(){
+    history = [];
+    phase = PHASE.PLACE_ON_ENTRY;
+    current = "W";
+    reserve = { W: 15, B: 15 };
+    selectedEntryKey = null;
+    entryTargets = null;
+    captureContext = null;
+    blinkOutMap.clear();
+    for(const s of board.values()) s.piece = null;
+
+    const starts = getDefaultStartingSpots();
+    const colors = ["W","B","W","B","W","B"];
+    starts.forEach((k, i)=>{
+      board.get(k).piece = {c: colors[i]};
+    });
+    reserve.W -= 3;
+    reserve.B -= 3;
+
+    render();
+    updateSideUI();
+    updateStatusForPhase();
+    logBox.textContent = "";
+    addLog("🆕 Uusi peli (Basic v0.9.15)");
+    addLog("ℹ️ Vuoro: valitse reunapiste → klikkaa korostettua sisäpistettä.");
+  }
+
+  function buildBoard(){
+    board.clear();
+    for(let q=-RADIUS; q<=RADIUS; q++){
+      for(let r=-RADIUS; r<=RADIUS; r++){
+        if(!inBoard(q,r)) continue;
+        const id = keyOf(q,r);
+        const {x,y} = axialToPixel(q,r);
+        board.set(id, {id,q,r,x,y,piece:null});
+      }
+    }
+    // entry points = all rim spots
+    entryKeys = [];
+    for(const sp of board.values()){
+      if(isRimSpot(sp.q, sp.r)) entryKeys.push(sp.id);
+    }
+    // stable order (optional)
+    entryKeys.sort();
+  }
+
+  function updateStatusForPhase(){
+    if(phase === PHASE.GAME_OVER){
+      setStatus("<b>Peli päättyi.</b> Aloita uusi peli tai peru.");
+      return;
+    }
+    if(phase === PHASE.PLACE_ON_ENTRY){
+      if(selectedEntryKey){
+        setStatus(`<b>Vaihe_2: </b> Klikkaa korostettua sisäpistettä, johon nappula työnnetään.`);
+      }else{
+        setStatus("<b>Vaihe_1: </b> Valitse jokin 24 reunapisteestä tuodaksesi uuden nappulan.");
+      }
+      return;
+    }
+    if(phase === PHASE.RESOLVE_CAPTURES){
+      setStatus("<b>Poistot:</b> Laudalla on vähintään 4 samanväristä peräkkäin. Poistot täytyy tehdä ennen seuraavaa vuoroa.");
+      return;
+    }
+  }
+
+
+  function clearHighlights(){
+    document.querySelectorAll(".spot.hilite,.spot.opt,.spot.entrySelW,.spot.entrySelB").forEach(el=>{el.classList.remove("hilite","opt","entrySelW","entrySelB");});
+  }
+  function hideModal(){
+    overlay.classList.remove("show");
+    clearHighlights();
+  }
+
+  function dirName(di){
+    const names = ["E","NE","NW","W","SW","SE"];
+    return names[di] || String(di);
+  }
+
+  function getInwardDirChoices(entryKey){
+    const s = board.get(entryKey);
+    if(!s) return [];
+    const choices = [];
+    for(let di=0; di<6; di++){
+      const nq = s.q + DIRS[di].q;
+      const nr = s.r + DIRS[di].r;
+      const nk = keyOf(nq,nr);
+      const nb = board.get(nk);
+      if(!nb) continue;
+      // inward = neighbor is strictly closer to center than the rim
+      if(distHex(nb.q, nb.r) < RADIUS){
+        choices.push(di);
+      }
+    }
+    // corners => 1, other rim => 2
+    return choices;
+  }
+
+  function buildEntryTargets(entryKey){
+    const s = board.get(entryKey);
+    if(!s) return null;
+    const choices = getInwardDirChoices(entryKey);
+    const mp = new Map();
+
+    for(const di of choices){
+      const tq = s.q + DIRS[di].q;
+      const tr = s.r + DIRS[di].r;
+      const tk = keyOf(tq,tr);
+      if(!board.has(tk)) continue;
+
+      // Check if the push in this direction is actually legal:
+      // - we push only within playable area (dist <= RADIUS-1)
+      // - there must exist at least one empty spot on that interior line
+      const line = buildLineFromEntry(tk, di);
+      if(line.length === 0) continue;
+
+      let emptyIdx = -1;
+      for(let i=0;i<line.length;i++){
+        if(!board.get(line[i]).piece){ emptyIdx = i; break; }
+      }
+      if(emptyIdx === -1){
+        // Full interior line -> would require pushing into rim (not allowed)
+        continue;
+      }
+
+      mp.set(tk, di);
+    }
+    return mp;
+  }
+
+  function flashBad(entryKey){
+    const spotEl = document.querySelector(`[data-spot="${entryKey}"]`);
+    if(spotEl) spotEl.classList.add("bad");
+    setTimeout(()=>{
+      if(spotEl) spotEl.classList.remove("bad");
+    }, 260);
+  }
+
+  function spotClicked(spotKey){
+    if(phase === PHASE.GAME_OVER) return;
+    if(phase === PHASE.RESOLVE_CAPTURES) return;
+    if(phase !== PHASE.PLACE_ON_ENTRY) return;
+
+    const isEntry = entryKeys.indexOf(spotKey) !== -1;
+
+    // If an entry is already selected, user must click a highlighted interior target (1–2 choices).
+    if(selectedEntryKey){
+      // switch to another entry directly
+      if(isEntry && spotKey !== selectedEntryKey){
+        selectedEntryKey = spotKey;
+    entryTargets = buildEntryTargets(selectedEntryKey);
+
+    // permanently color selected entry with player color
+    const el = document.querySelector(`[data-spot="${spotKey}"]`);
+    if(el){
+      el.setAttribute("stroke", (current === "W") ? "var(--white)" : "var(--black)");
+      el.setAttribute("stroke-width", "4");
+    }
+        render();
+        updateStatusForPhase();
+        return;
+      }
+
+      // click the selected entry again toggles off
+      if(spotKey === selectedEntryKey){
+        selectedEntryKey = null;
+        entryTargets = null;
+        render();
+        updateStatusForPhase();
+        return;
+      }
+
+      // click a valid target interior spot -> determine direction and push
+      if(entryTargets && entryTargets.has(spotKey)){
+        const di = entryTargets.get(spotKey);
+        executeMoveFromEntry(selectedEntryKey, di);
+        return;
+      }
+
+      // any other click cancels the selection
+      selectedEntryKey = null;
+      entryTargets = null;
+      render();
+      updateStatusForPhase();
+      return;
+    }
+
+    // No selection yet: only rim entries can be selected
+    if(!isEntry) return;
+
+    selectedEntryKey = spotKey;
+    entryTargets = buildEntryTargets(selectedEntryKey);
+    render();
+    updateStatusForPhase();
+  }
+
+  function buildLineFromEntry(entryKey, dirIdx){
+    const dir = DIRS[dirIdx];
+    const out = [];
+    let cur = board.get(entryKey);
+    if(!cur) return out;
+
+    // Only the interior (dist <= RADIUS-1) is playable.
+    if(distHex(cur.q, cur.r) > RADIUS-1) return out;
+
+    out.push(cur.id);
+    while(true){
+      const nq = cur.q + dir.q;
+      const nr = cur.r + dir.r;
+
+      // Stop before the rim: rim (dist == RADIUS) is NOT part of play area.
+      if(distHex(nq, nr) > RADIUS-1) break;
+
+      const nk = keyOf(nq,nr);
+      if(!board.has(nk)) break;
+
+      cur = board.get(nk);
+      out.push(cur.id);
+    }
+    return out;
+  }
+
+  function executeMoveFromEntry(entryKey, chosenDirIdx){
+    const dirIdx = (typeof chosenDirIdx === "number") ? chosenDirIdx : getInwardDirChoices(entryKey)[0];
+    if(typeof dirIdx !== "number"){
+      flashBad(entryKey);
+      return;
+    }
+
+    if(reserve[current] <= 0){
+      phase = PHASE.GAME_OVER;
+      render();
+      updateStatusForPhase();
+      addLog(`🏁 ${currentColorName(current)} ei voi enää tuoda nappulaa peliin. Häviö.`);
+      return;
+    }
+
+    // Entry point (rim spot) is NOT a playable cell.
+    // The inserted piece must enter the board on the first interior spot in the chosen direction.
+    const e = board.get(entryKey);
+    const firstQ = e.q + DIRS[dirIdx].q;
+    const firstR = e.r + DIRS[dirIdx].r;
+    const firstKey = keyOf(firstQ, firstR);
+    if(!board.has(firstKey)){
+      flashBad(entryKey);
+      return;
+    }
+
+    const line = buildLineFromEntry(firstKey, dirIdx);
+    if(line.length === 0){
+      flashBad(entryKey);
+      return;
+    }
+
+    // Find the first empty spot along the line (starting from the entry-facing end).
+    // Only pieces up to that empty spot are shifted. Pieces beyond the first gap do NOT move.
+    let emptyIdx = -1;
+    for(let i=0; i<line.length; i++){
+      if(!board.get(line[i]).piece){ emptyIdx = i; break; }
+    }
+    if(emptyIdx === -1){
+      // No empty interior spot to receive the push -> would require pushing into the rim (not allowed).
+      flashBad(entryKey);
+      setStatus("<b>Virhe:</b> Rivi on täynnä (et voi työntää kehysalueelle).");
+      return;
+    }
+
+    snapshot();
+    reserve[current]--;
+
+    // Shift only the occupied chain until the first empty spot.
+    for(let i=emptyIdx; i>=1; i--){
+      const toK = line[i];
+      const fromK = line[i-1];
+      board.get(toK).piece = board.get(fromK).piece;
+    }
+    // Place the new piece on the first interior spot.
+    board.get(line[0]).piece = {c: current};
+
+    selectedEntryKey = null;
+    entryTargets = null;
+
+    addLog(`➕ ${currentColorName(current)} toi nappulan: ${entryKey} → ${dirName(dirIdx)} (sisään ${firstKey})`);
+
+    const any = startCaptureResolution(current);
+    render();
+    updateSideUI();
+    updateStatusForPhase();
+
+    if(!any){
+      current = (current==="W") ? "B" : "W";
+      render();
+      updateSideUI();
+      updateStatusForPhase();
+      if(reserve[current] <= 0){
+        phase = PHASE.GAME_OVER;
+        render();
+        updateStatusForPhase();
+        addLog(`🏁 ${currentColorName(current)} ei voi enää tuoda nappulaa peliin. Häviö.`);
+      }
+    }
+  }
+
+  // ===== Captures (same as before) =====
+
+  function startCaptureResolution(causePlayer){
+    const rowsW = findCaptureRows("W");
+    const rowsB = findCaptureRows("B");
+    if(rowsW.length===0 && rowsB.length===0){
+      captureContext = null;
+      phase = PHASE.PLACE_ON_ENTRY;
+      return false;
+    }
+
+    phase = PHASE.RESOLVE_CAPTURES;
+
+    const order = (causePlayer === "W") ? ["W","B"] : ["B","W"];
+    captureContext = {
+      causePlayer,
+      pendingByColor: {W: rowsW, B: rowsB},
+      order,
+    };
+
+    addLog(`✂️ Poistot alkavat (ensin ${currentColorName(order[0])}).`);
+    resolveNextCaptureStep();
+    return true;
+  }
+
+  function findCaptureRows(color){
+    const results = [];
+    const visited = new Set();
+    const scanDirs = [0,1,2];
+
+    for(const sp of board.values()){
+      if(!sp.piece || sp.piece.c !== color) continue;
+      for(const d of scanDirs){
+        const vid = sp.id + "|d" + d;
+        if(visited.has(vid)) continue;
+
+        let start = sp;
+        const back = DIRS[dirIndexOpp(d)];
+        while(true){
+          const pq = start.q + back.q;
+          const pr = start.r + back.r;
+          const pk = keyOf(pq,pr);
+          const ps = board.get(pk);
+          if(!ps || !ps.piece || ps.piece.c !== color) break;
+          start = ps;
+        }
+
+        const seg = [];
+        let cur = start;
+        while(true){
+          if(cur.piece && cur.piece.c === color){
+            seg.push(cur.id);
+          }else{
+            break;
+          }
+          const nq = cur.q + DIRS[d].q;
+          const nr = cur.r + DIRS[d].r;
+          const nk = keyOf(nq,nr);
+          const ns = board.get(nk);
+          if(!ns || !ns.piece || ns.piece.c !== color) break;
+          cur = ns;
+        }
+
+        for(const k of seg) visited.add(k + "|d" + d);
+
+        if(seg.length >= 4){
+          results.push({ color, dirIdx: d, segment: seg.slice() });
+        }
+      }
+    }
+
+    const uniq = [];
+    const seen = new Set();
+    for(const r of results){
+      const sig = r.color + "|" + r.dirIdx + "|" + r.segment.join(",");
+      if(seen.has(sig)) continue;
+      seen.add(sig);
+      uniq.push(r);
+    }
+    return uniq;
+  }
+
+  function segmentsIntersect(segA, segB){
+    const setA = new Set(segA.segment);
+    return segB.segment.some(k => setA.has(k));
+  }
+
+  function showCaptureChoiceModal(color, segs){
+    clearHighlights();
+    for(const s of segs){
+      for(const k of s.segment){
+        const el = document.querySelector(`[data-spot="${k}"]`);
+        if(el) el.classList.add("hilite");
+      }
+    }
+
+    modalTitle.textContent = `Poistovalinta: ${currentColorName(color)}`;
+    modalText.textContent = "Useampi rivi leikkaa toisensa. Valitse, mikä rivi poistetaan seuraavaksi.";
+    modalChoices.innerHTML = "";
+    segs.forEach((s, idx)=>{
+      const btn = document.createElement("button");
+      btn.className = "choiceBtn";
+      btn.textContent = `Rivi ${idx+1}: ${s.segment.length} kpl (${s.segment.join(" ")})`;
+      btn.onclick = ()=>{
+        hideModal();
+        performCaptureForSegment(s);
+        };
+      modalChoices.appendChild(btn);
+    });
+
+    overlay.classList.add("show");
+  }
+
+  function resolveNextCaptureStep(){
+    if(!captureContext){
+      phase = PHASE.PLACE_ON_ENTRY;
+      updateStatusForPhase();
+      return;
+    }
+
+    captureContext.pendingByColor.W = findCaptureRows("W");
+    captureContext.pendingByColor.B = findCaptureRows("B");
+
+    const {order} = captureContext;
+
+    if(captureContext.pendingByColor.W.length===0 && captureContext.pendingByColor.B.length===0){
+      captureContext = null;
+      phase = PHASE.PLACE_ON_ENTRY;
+      updateStatusForPhase();
+
+      current = (current==="W") ? "B" : "W";
+      render();
+      updateSideUI();
+      updateStatusForPhase();
+      if(reserve[current] <= 0){
+        phase = PHASE.GAME_OVER;
+        render();
+        updateStatusForPhase();
+        addLog(`🏁 ${currentColorName(current)} ei voi enää tuoda nappulaa peliin. Häviö.`);
+      }
+      return;
+    }
+
+    let actColor = null;
+    for(const c of order){
+      if(captureContext.pendingByColor[c].length>0){ actColor = c; break; }
+    }
+    if(!actColor){
+      actColor = (order[0]==="W") ? "B" : "W";
+    }
+
+    const segs = captureContext.pendingByColor[actColor];
+
+    let hasIntersection = false;
+    for(let i=0;i<segs.length;i++){
+      for(let j=i+1;j<segs.length;j++){
+        if(segmentsIntersect(segs[i], segs[j])) { hasIntersection = true; break; }
+      }
+      if(hasIntersection) break;
+    }
+
+    if(!hasIntersection){
+      performCaptureForSegment(segs[0]);
+      return;
+    }
+
+    showCaptureChoiceModal(actColor, segs);
+  }
+
+  function performCaptureForSegment(seg){
+    // seg: { color, dirIdx, segment:[keys...] }
+    const d = seg.dirIdx;
+
+    const firstKey = seg.segment[0];
+    const lastKey  = seg.segment[seg.segment.length-1];
+    const first = board.get(firstKey);
+    const last  = board.get(lastKey);
+    if(!first || !last) return;
+
+    const backDir = DIRS[dirIndexOpp(d)];
+    const forwardDir = DIRS[d];
+
+    // Collect pieces to remove: the row itself + any contiguous pieces directly adjacent to it
+    // on BOTH ends along the same line (regardless of color).
+    const toRemove = [];
+
+    let cur = first;
+    while(true){
+      const nq = cur.q + backDir.q;
+      const nr = cur.r + backDir.r;
+      const nk = keyOf(nq,nr);
+      const ns = board.get(nk);
+      if(!ns || !ns.piece) break;
+      toRemove.push(ns.id);
+      cur = ns;
+    }
+
+    for(const k of seg.segment) toRemove.push(k);
+
+    cur = last;
+    while(true){
+      const nq = cur.q + forwardDir.q;
+      const nr = cur.r + forwardDir.r;
+      const nk = keyOf(nq,nr);
+      const ns = board.get(nk);
+      if(!ns || !ns.piece) break;
+      toRemove.push(ns.id);
+      cur = ns;
+    }
+
+    const actor = seg.color;
+    const uniq = Array.from(new Set(toRemove));
+
+    // Stage 1: blink (do not remove yet)
+    blinkOutMap.clear();
+    for(const k of uniq){
+      const s = board.get(k);
+      if(!s || !s.piece) continue;
+      blinkOutMap.set(k, s.piece.c);
+    }
+    render();
+
+    // Stage 2: remove after delay, update reserves, then continue capture resolution
+    setTimeout(()=>{
+      let ownBack = 0, oppLost = 0;
+
+      for(const k of uniq){
+        const s = board.get(k);
+        if(!s || !s.piece) continue;
+        const pc = s.piece.c;
+
+        if(pc === actor){
+          reserve[actor] += 1;
+          ownBack++;
+        }else{
+          oppLost++;
+        }
+        s.piece = null;
+      }
+
+      blinkOutMap.clear();
+      addLog(`✂️ ${currentColorName(actor)} poisti rivin: palautui ${ownBack}, vastustajalta pois ${oppLost}.`);
+
+      render();
+      updateSideUI();
+      updateStatusForPhase();
+
+      setTimeout(resolveNextCaptureStep, 0);
+    }, 700);
+  }
+
+  // ===== Render =====
+
+  function render(){
+    const svg = buildSVG();
+    boardHost.innerHTML = "";
+    boardHost.appendChild(svg);
+
+    updateSideUI();
+
+    if(selectedEntryKey){
+      const el = svg.querySelector(`[data-spot="${selectedEntryKey}"]`);
+      if(el){
+        el.classList.add(current === "W" ? "entrySelW" : "entrySelB");
+      }
+    }
+    if(entryTargets){
+      entryTargets.forEach((di, tk)=>{
+        const el = svg.querySelector(`[data-spot="${tk}"]`);
+        if(el) el.classList.add("opt");
+      });
+    }
+
+    if(phase === PHASE.RESOLVE_CAPTURES){
+      const rw = findCaptureRows("W");
+      const rb = findCaptureRows("B");
+      for(const s of [...rw, ...rb]){
+        for(const k of s.segment){
+          const el = svg.querySelector(`[data-spot="${k}"]`);
+          if(el) el.classList.add("hilite");
+        }
+      }
+    }
+  }
+
+  function buildSVG(){
+    const ns = "http://www.w3.org/2000/svg";
+    const svg = document.createElementNS(ns, "svg");
+
+    // --- dynamic viewBox to avoid clipping (includes outer strokes/shadows) ---
+    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+    for(const sp of board.values()){
+      if(sp.x < minX) minX = sp.x;
+      if(sp.y < minY) minY = sp.y;
+      if(sp.x > maxX) maxX = sp.x;
+      if(sp.y > maxY) maxY = sp.y;
+    }
+    const PAD = SPOT_R + 28;
+    const vbX = Math.floor(minX - PAD);
+    const vbY = Math.floor(minY - PAD);
+    const vbW = Math.ceil((maxX - minX) + PAD*2);
+    const vbH = Math.ceil((maxY - minY) + PAD*2);
+    svg.setAttribute("viewBox", `${vbX} ${vbY} ${vbW} ${vbH}`);
+
+    const defs = document.createElementNS(ns, "defs");
+    defs.innerHTML = `
+      <filter id="ds" x="-40%" y="-40%" width="180%" height="180%">
+        <feDropShadow dx="0" dy="3" stdDeviation="3" flood-color="rgba(0,0,0,.45)"/>
+      </filter>
+    `;
+    svg.appendChild(defs);
+
+    // Grid lines: draw only edges where NOT (rim->rim).
+    const gLines = document.createElementNS(ns, "g");
+    for(const sp of board.values()){
+      for(let d=0; d<3; d++){
+        const nq = sp.q + DIRS[d].q;
+        const nr = sp.r + DIRS[d].r;
+        const nk = keyOf(nq,nr);
+        const nb = board.get(nk);
+        if(!nb) continue;
+
+        const rimA = isRimSpot(sp.q, sp.r);
+        const rimB = isRimSpot(nb.q, nb.r);
+        if(rimA && rimB) continue; // ✅ no boundary-to-boundary lines
+
+        const ln = document.createElementNS(ns, "line");
+        ln.setAttribute("x1", sp.x); ln.setAttribute("y1", sp.y);
+        ln.setAttribute("x2", nb.x); ln.setAttribute("y2", nb.y);
+        ln.setAttribute("class", "gridLine");
+        gLines.appendChild(ln);
+      }
+    }
+    svg.appendChild(gLines);
+
+    const gSpots = document.createElementNS(ns, "g");
+    for(const sp of board.values()){
+      const spot = document.createElementNS(ns, "circle");
+      spot.setAttribute("cx", sp.x);
+      spot.setAttribute("cy", sp.y);
+      spot.setAttribute("r", SPOT_R);
+      spot.setAttribute("class", "spot" + (isRimSpot(sp.q, sp.r) ? " entry" : ""));
+      spot.setAttribute("data-spot", sp.id);
+
+      // hover highlight for entry points (player color)
+      if(isRimSpot(sp.q, sp.r)){
+        // store base stroke so we can restore (inline attributes override CSS)
+        spot.dataset.baseStroke = spot.getAttribute("stroke") || "";
+        spot.dataset.baseStrokeWidth = spot.getAttribute("stroke-width") || "";
+
+        spot.addEventListener("mouseenter", ()=>{
+          if(phase !== PHASE.PLACE_ON_ENTRY) return;
+          if(selectedEntryKey) return;
+          spot.setAttribute("stroke", (current === "W") ? "var(--white)" : "var(--black)");
+          spot.setAttribute("stroke-width", "4");
+        });
+        spot.addEventListener("mouseleave", ()=>{
+          // do not clear color if this entry is selected
+          if(selectedEntryKey === sp.id) return;
+          if(spot.dataset.baseStroke !== "") spot.setAttribute("stroke", spot.dataset.baseStroke);
+          else spot.removeAttribute("stroke");
+          if(spot.dataset.baseStrokeWidth !== "") spot.setAttribute("stroke-width", spot.dataset.baseStrokeWidth);
+          else spot.removeAttribute("stroke-width");
+        });
+
+      }
+      spot.addEventListener("click", (e)=>{
+        e.stopPropagation();
+        spotClicked(sp.id);
+      });
+      gSpots.appendChild(spot);
+
+      if(sp.piece){
+        const p = document.createElementNS(ns, "circle");
+        p.setAttribute("cx", sp.x);
+        p.setAttribute("cy", sp.y);
+        p.setAttribute("r", SPOT_R - 2);
+
+        const baseClass = (sp.piece.c==="W") ? "pieceW pieceShadow" : "pieceB pieceShadow";
+        // If this piece is about to be removed, blink the piece itself (no solid piece underneath),
+        // otherwise draw normally.
+        if(blinkOutMap && blinkOutMap.has(sp.id)){
+          p.setAttribute("class", baseClass + " blinkOut");
+        }else{
+          p.setAttribute("class", baseClass);
+        }
+
+        gSpots.appendChild(p);
+      }
+    }
+    svg.appendChild(gSpots);
+
+    svg.addEventListener("click", ()=>{
+      if(phase !== PHASE.PLACE_ON_ENTRY) return;
+      if(selectedEntryKey){
+        selectedEntryKey = null;
+        entryTargets = null;
+    entryTargets = null;
+        render();
+        updateStatusForPhase();
+      }
+    });
+
+    return svg;
+  }
+
+  // ===== Init =====
+  buildBoard();
+
+/* SERVICE WORKER */
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker
+      .register('./service-worker.js')
+      .catch(err => console.warn('Service workerin rekisteröinti epäonnistui:', err));
+  });
+}
+
+  function boot(){
+    newBtn.addEventListener("click", newGame);
+    undoBtn.addEventListener("click", undo);
+    resetBtn.addEventListener("click", resetBoardOnly);
+
+    overlay.addEventListener("click", (e)=>{
+      if(e.target === overlay) return; // pakollinen valinta
+    });
+
+    newGame();
+    updateStatusForPhase();
+  }
+
+  boot();
+})();
+</script>
+</body>
+</html>
