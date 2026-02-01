@@ -8,7 +8,7 @@
   <link rel="apple-touch-icon" sizes="192x192" href="./icon192.png">
   <meta name="theme-color" content="#0b1220" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
-  <title>GIPF (v0.9.15 – Basic)</title>
+  <title>GIPF (v0.9.16 – Basic)</title>
   <style>
     :root{
       --bg:#0b1220;
@@ -90,7 +90,7 @@
       gap:8px;
       align-items:center;
     }
-    .pill strong{color:var(--ink); font-weight:700;}
+    .pill strong{font-weight:700;}
     .btn{
       border:1px solid rgba(255,255,255,.14);
       background:rgba(255,255,255,.06);
@@ -104,6 +104,17 @@
     .btn:hover{background:rgba(255,255,255,.09);}
     .btn:active{transform:translateY(1px);}
     .btn.danger{border-color:rgba(255,107,107,.35); background:rgba(255,107,107,.10);}
+	
+
+.turnWhite{
+  color: #ffffff;
+}
+
+.turnBlack{
+  color: #fb7185; /* sama väri kuin punaisilla nappuloilla */
+}
+
+
 
     .status{
       padding:10px 12px;
@@ -198,7 +209,7 @@
           <h3 id="modalTitle">Valinta</h3>
           <p id="modalText">Valitse vaihtoehto.</p>
           <div id="modalChoices" class="choices"></div>
-          <div class="tiny" style="margin-top:10px;">v0.9.15: sisääntulo = 24 reunapistettä (ei irrallisia pisteitä). Reunareunaviivat poistettu.</div>
+          <div class="tiny" style="margin-top:10px;">v0.9.16: sisääntulo = 24 reunapistettä (ei irrallisia pisteitä). Reunareunaviivat poistettu.</div>
         </div>
       </div>
 
@@ -208,7 +219,18 @@
     <div class="side">
       <div class="row">
         <div class="pill">Vuoro: <strong id="turnLabel">Valkoinen</strong></div>
-        <button class="btn" id="newBtn">Uusi peli</button>
+        
+<label class="pill" style="gap:8px;">
+  Valkoisen tasoitus:
+  <select id="whiteStartSel" class="btn" style="padding:2px 8px;font-weight:700;">
+    <option value="15" selected>0</option>
+    <option value="16">+1</option>
+    <option value="17">+2</option>
+    <option value="18">+3</option>
+  </select>
+</label>
+<button class="btn" id="newBtn">Uusi peli</button>
+
       </div>
 
       <div class="row">
@@ -229,7 +251,7 @@
 
 <script>
 /* =========================================================
-   GIPF (v0.9.15 – Basic rules only)
+   GIPF (v0.9.16 – Basic rules only)
    - Board radius 4 -> 61 spots (side has 5 points)
    - Entry points are the 24 rim spots (distance == RADIUS) and are NOT part of the play area
    - IMPORTANT: No rim-to-rim grid lines are drawn.
@@ -292,6 +314,7 @@
   const modalChoices = document.getElementById("modalChoices");
 
   const newBtn = document.getElementById("newBtn");
+  const whiteStartSel = document.getElementById("whiteStartSel");
   const undoBtn = document.getElementById("undoBtn");
   const resetBtn = document.getElementById("resetBtn");
 
@@ -320,11 +343,21 @@
     statusBox.innerHTML = html;
   }
 
-  function updateSideUI(){
-    turnLabel.textContent = (current === "W") ? "Valkoinen" : "Punainen";
-    wResEl.textContent = String(reserve.W);
-    bResEl.textContent = String(reserve.B);
+function updateSideUI(){
+  turnLabel.textContent = (current === "W") ? "Valkoinen" : "Punainen";
+
+  // vaihda vuorotekstin väri
+  turnLabel.classList.remove("turnWhite","turnBlack");
+  if(current === "W"){
+    turnLabel.classList.add("turnWhite");
+  }else{
+    turnLabel.classList.add("turnBlack");
   }
+
+  wResEl.textContent = String(reserve.W);
+  bResEl.textContent = String(reserve.B);
+}
+
 
   function snapshot(){
     const snap = {
@@ -407,7 +440,9 @@
     history = [];
     phase = PHASE.PLACE_ON_ENTRY;
     current = "W";
-    reserve = { W: 15, B: 15 };
+    const wStart = whiteStartSel ? parseInt(whiteStartSel.value,10) : 15;
+    reserve = { W: (wStart===15||wStart===16||wStart===17||wStart===18) ? wStart : 15, B: 15 };
+    try{ localStorage.setItem("gipf_white_start", String(reserve.W)); }catch(e){}
     selectedEntryKey = null;
     entryTargets = null;
     captureContext = null;
@@ -426,7 +461,7 @@
     updateSideUI();
     updateStatusForPhase();
     logBox.textContent = "";
-    addLog("🆕 Uusi peli (Basic v0.9.15)");
+    addLog("🆕 Uusi peli (Basic v0.9.16)");
     addLog("ℹ️ Vuoro: valitse reunapiste → klikkaa korostettua sisäpistettä.");
   }
 
@@ -456,14 +491,14 @@
     }
     if(phase === PHASE.PLACE_ON_ENTRY){
       if(selectedEntryKey){
-        setStatus(`<b>Vaihe_2: </b> Klikkaa korostettua sisäpistettä, johon nappula työnnetään.`);
+        setStatus(`<b>Klikkaa korostettua sisäpistettä, johon nappula työnnetään.</b>`);
       }else{
-        setStatus("<b>Vaihe_1: </b> Valitse jokin 24 reunapisteestä tuodaksesi uuden nappulan.");
+        setStatus("<b>Valitse jokin 24 reunapisteestä tuodaksesi uuden nappulan.</b>");
       }
       return;
     }
     if(phase === PHASE.RESOLVE_CAPTURES){
-      setStatus("<b>Poistot:</b> Laudalla on vähintään 4 samanväristä peräkkäin. Poistot täytyy tehdä ennen seuraavaa vuoroa.");
+      setStatus("<b>Poistot: Laudalla on vähintään 4 samanväristä peräkkäin. Poistot täytyy tehdä ennen seuraavaa vuoroa.</b>");
       return;
     }
   }
@@ -1125,6 +1160,13 @@ if ('serviceWorker' in navigator) {
 }
 
   function boot(){
+    try{
+      const v = parseInt(localStorage.getItem("gipf_white_start"),10);
+      if(whiteStartSel && [12,13,14,15].includes(v)){
+        whiteStartSel.value = String(v);
+      }
+    }catch(e){}
+
     newBtn.addEventListener("click", newGame);
     undoBtn.addEventListener("click", undo);
     resetBtn.addEventListener("click", resetBoardOnly);
