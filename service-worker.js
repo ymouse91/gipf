@@ -1,5 +1,5 @@
 /* Minimal SW: cache app shell */
-const CACHE = "gipf-v2";
+const CACHE = "gipf-v3";
 const ASSETS = [
   "./",
   "./index.html",
