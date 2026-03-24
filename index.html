@@ -8,7 +8,7 @@
   <link rel="apple-touch-icon" sizes="192x192" href="./icon192.png">
   <meta name="theme-color" content="#0b1220" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
-  <title>GIPF (v0.9.16 – Basic)</title>
+  <title>GIPF (v0.9.17 – Basic)</title>
   <style>
     :root{
       --bg:#0b1220;
@@ -198,6 +198,83 @@
     }
     .choiceBtn:hover{background:rgba(255,255,255,.06);}
     .tiny{font-size:12px; color:var(--muted);}
+
+    .gameTitleCard{
+      padding:12px 14px;
+      border-radius:16px;
+      background:linear-gradient(180deg, rgba(255,255,255,.07), rgba(255,255,255,.03));
+      border:1px solid rgba(255,255,255,.10);
+      box-shadow:0 8px 22px rgba(0,0,0,.22);
+    }
+    .gameTitle{
+      font-size:24px;
+      font-weight:900;
+      letter-spacing:.08em;
+      line-height:1;
+      margin:0 0 6px 0;
+    }
+    .gameSubtitle{
+      color:var(--muted);
+      font-size:13px;
+      line-height:1.35;
+      margin:0;
+    }
+
+    .helpOverlay{
+      position:absolute;
+      inset:0;
+      display:none;
+      align-items:center;
+      justify-content:center;
+      background:rgba(0,0,0,.62);
+      z-index:8;
+      padding:16px;
+      box-sizing:border-box;
+    }
+    .helpOverlay.show{display:flex;}
+    .helpModal{
+      width:min(720px, 100%);
+      max-height:min(82vh, 820px);
+      overflow:auto;
+      background:linear-gradient(180deg, rgba(255,255,255,.08), rgba(255,255,255,.04));
+      border:1px solid rgba(255,255,255,.14);
+      border-radius:18px;
+      box-shadow:0 18px 50px rgba(0,0,0,.55);
+      padding:18px;
+      box-sizing:border-box;
+    }
+    .helpModal h2{
+      margin:0 0 10px 0;
+      font-size:22px;
+      line-height:1.1;
+    }
+    .helpModal h3{
+      margin:14px 0 6px 0;
+      font-size:16px;
+      line-height:1.2;
+    }
+    .helpModal p{
+      margin:0 0 10px 0;
+      color:var(--muted);
+      font-size:14px;
+      line-height:1.45;
+    }
+    .helpModal ul{
+      margin:0 0 10px 20px;
+      padding:0;
+      color:var(--muted);
+      font-size:14px;
+      line-height:1.45;
+    }
+    .helpModal li{ margin:0 0 6px 0; }
+    .helpTopRow{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:12px;
+      margin-bottom:8px;
+    }
+
   </style>
 </head>
 
@@ -209,7 +286,49 @@
           <h3 id="modalTitle">Valinta</h3>
           <p id="modalText">Valitse vaihtoehto.</p>
           <div id="modalChoices" class="choices"></div>
-          <div class="tiny" style="margin-top:10px;">v0.9.16: sisääntulo = 24 reunapistettä (ei irrallisia pisteitä). Reunareunaviivat poistettu.</div>
+          <div class="tiny" style="margin-top:10px;">v0.9.17: sisääntulo = 24 reunapistettä (ei irrallisia pisteitä). Reunareunaviivat poistettu.</div>
+        </div>
+      </div>
+
+
+      <div id="helpOverlay" class="helpOverlay" aria-hidden="true">
+        <div class="helpModal" role="dialog" aria-modal="true" aria-labelledby="helpTitle">
+          <div class="helpTopRow">
+            <h2 id="helpTitle">GIPF – ohjeet</h2>
+            <button class="btn" id="helpCloseBtn" type="button">Sulje</button>
+          </div>
+
+          <p>GIPF on kaksinpeli, jossa nappuloita työnnetään laudalle reunapisteistä.</p>
+<h3>Pelin tavoite</h3>
+<p>
+Tavoitteena on pakottaa vastustaja tilanteeseen, jossa häneltä loppuvat nappulat. Tällöin hän häviää pelin.
+</p>
+          <h3>1. Vuoro</h3>
+          <ul>
+            <li>Valitse ensin jokin 24 reunapisteestä.</li>
+            <li>Klikkaa sitten keltaisella korostettua sisäpistettä, johon nappula työnnetään.</li>
+            <li>Reunapiste ei ole pelialuetta, vaan pelkkä sisääntulokohta.</li>
+          </ul>
+
+          <h3>2. Työntö</h3>
+          <ul>
+            <li>Jos ensimmäinen piste on varattu, yhtenäinen nappulaketju siirtyy yhden askeleen eteenpäin.</li>
+            <li>Työntö ei ole sallittu, jos linjalla ei ole tilaa pelialueen sisällä.</li>
+            <li>Nappula ei koskaan saa päätyä kehysalueelle.</li>
+          </ul>
+
+          <h3>3. Poistot</h3>
+          <ul>
+            <li>Kun laudalle muodostuu vähintään neljän samanvärisen nappulan rivi, niin se poistetaan pelilaudalta.</li>
+            <li>Samalla poistuvat myös muut rivissä kiinni olleet nappulat.</li>
+            <li>Poistuvat nappulat vilkkuvat hetken ennen katoamista.</li>
+			<li>Neljän suoran muodostaneen värin nappulat palautuvat omistajelleen, mutta vastapuolen nappulat poistuvat kokonaan pelistä.</li>
+          </ul>
+
+          <h3>4. Tasoitus</h3>
+          <p>Valkoisen tasoitus valitaan sivupaneelista. Arvot 0, +1, +2 ja +3 tarkoittavat, että valkoinen aloittaa vastaavasti 15, 16, 17 tai 18 nappulalla.</p>
+
+
         </div>
       </div>
 
@@ -217,8 +336,18 @@
     </div>
 
     <div class="side">
+      <div class="gameTitleCard">
+        <div class="row" style="justify-content:space-between; align-items:flex-start;">
+          <div>
+            <h1 class="gameTitle">GIPF</h1>
+            <p class="gameSubtitle">Basic-versio. Työnnä nappuloita laudalle, muodosta rivejä ja poista näin vastustajan nappuloita pelistä.</p>
+          </div>
+          <button class="btn" id="helpBtn" type="button">Ohjeet</button>
+        </div>
+      </div>
+
       <div class="row">
-        <div class="pill">Vuoro: <strong id="turnLabel">Valkoinen</strong></div>
+
         
 <label class="pill" style="gap:8px;">
   Valkoisen tasoitus:
@@ -236,6 +365,7 @@
       <div class="row">
         <div class="pill">Valkoisia: <strong id="wRes">15</strong></div>
         <div class="pill">Punaisia: <strong id="bRes">15</strong></div>
+		        <div class="pill">Vuoro: <strong id="turnLabel">Valkoinen</strong></div>
       </div>
 
       <div class="status" id="statusBox"></div>
@@ -251,7 +381,7 @@
 
 <script>
 /* =========================================================
-   GIPF (v0.9.16 – Basic rules only)
+   GIPF (v0.9.17 – Basic rules only)
    - Board radius 4 -> 61 spots (side has 5 points)
    - Entry points are the 24 rim spots (distance == RADIUS) and are NOT part of the play area
    - IMPORTANT: No rim-to-rim grid lines are drawn.
@@ -317,6 +447,22 @@
   const whiteStartSel = document.getElementById("whiteStartSel");
   const undoBtn = document.getElementById("undoBtn");
   const resetBtn = document.getElementById("resetBtn");
+  const helpBtn = document.getElementById("helpBtn");
+  const helpOverlay = document.getElementById("helpOverlay");
+  const helpCloseBtn = document.getElementById("helpCloseBtn");
+
+
+  function openHelp(){
+    if(!helpOverlay) return;
+    helpOverlay.classList.add("show");
+    helpOverlay.setAttribute("aria-hidden", "false");
+  }
+
+  function closeHelp(){
+    if(!helpOverlay) return;
+    helpOverlay.classList.remove("show");
+    helpOverlay.setAttribute("aria-hidden", "true");
+  }
 
   function keyOf(q,r){ return q + "," + r; }
   function distHex(q,r){
@@ -461,7 +607,7 @@ function updateSideUI(){
     updateSideUI();
     updateStatusForPhase();
     logBox.textContent = "";
-    addLog("🆕 Uusi peli (Basic v0.9.16)");
+    addLog("🆕 Uusi peli (Basic v0.9.17)");
     addLog("ℹ️ Vuoro: valitse reunapiste → klikkaa korostettua sisäpistettä.");
   }
 
@@ -486,7 +632,7 @@ function updateSideUI(){
 
   function updateStatusForPhase(){
     if(phase === PHASE.GAME_OVER){
-      setStatus("<b>Peli päättyi.</b> Aloita uusi peli tai peru.");
+      setStatus("<b>Peli päättyi.</b>&nbsp;Aloita uusi peli tai peru.");
       return;
     }
     if(phase === PHASE.PLACE_ON_ENTRY){
@@ -1171,9 +1317,18 @@ if ('serviceWorker' in navigator) {
     undoBtn.addEventListener("click", undo);
     resetBtn.addEventListener("click", resetBoardOnly);
 
-    overlay.addEventListener("click", (e)=>{
-      if(e.target === overlay) return; // pakollinen valinta
+    if(helpBtn) helpBtn.addEventListener("click", openHelp);
+    if(helpCloseBtn) helpCloseBtn.addEventListener("click", closeHelp);
+    if(helpOverlay){
+      helpOverlay.addEventListener("click", (e)=>{
+        if(e.target === helpOverlay) closeHelp();
+      });
+    }
+    document.addEventListener("keydown", (e)=>{
+      if(e.key === "Escape") closeHelp();
     });
+
+
 
     newGame();
     updateStatusForPhase();
